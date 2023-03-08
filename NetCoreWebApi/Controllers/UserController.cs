@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NetCoreWebApi.Models;
+using NetCoreWebApi.Services;
 
 namespace NetCoreWebApi.Controllers
 {
@@ -7,27 +8,11 @@ namespace NetCoreWebApi.Controllers
     [Route("user")]
     public class UserController : ControllerBase
     {
-        private readonly List<User>  _listUsers;
+        private readonly IUserService _userService;
 
-        public UserController() 
+        public UserController(IUserService userService)
         {
-            _listUsers = new List<User>
-            {
-                new User
-                {
-                    FirstName = "Jhon",
-                    LastName = "Lemon",
-                    Email = "JhonLemon@gmail.com",
-                    DateOfBirth = new DateTime(1980, 3, 25)
-                },
-                new User
-                {
-                    FirstName = "Marcus",
-                    LastName = "Casper",
-                    Email = "MarcusCasper@gmail.com",
-                    DateOfBirth = new DateTime(1989, 8, 12)
-                }
-            };
+            _userService = userService;
         }
 
         [HttpGet]
@@ -36,7 +21,25 @@ namespace NetCoreWebApi.Controllers
         {
             try
             {
-                return _listUsers;
+                return _userService.GetAll();
+            }
+            catch (Exception ex)
+            {
+                return new ErrorCode
+                {
+                    Succes = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        [HttpGet]
+        [Route("one")]
+        public dynamic listUser(Guid Id)
+        {
+            try
+            {
+                return _userService.GetUser(Id);
             }
             catch (Exception ex)
             {
@@ -65,30 +68,7 @@ namespace NetCoreWebApi.Controllers
                     };
                 }
 
-                if (user.DateOfBirth > DateTime.Now.AddYears(-18))
-                {
-                    return new ErrorCode
-                    {
-                        Succes = false,
-                        Message = "User must be older than 18 years old"
-                    };
-                }
-
-                if (_listUsers.Any(x => x.Email == user.Email))
-                {
-                    return new ErrorCode
-                    {
-                        Succes = false,
-                        Message = "Email already exists"
-                    };
-                }
-
-                return new ErrorCode
-                {
-                    Succes = true,
-                    Message = "User registered",
-                    Result = user
-                };
+                return _userService.SaveUser(user);
             }
             catch (Exception ex)
             {
@@ -98,7 +78,67 @@ namespace NetCoreWebApi.Controllers
                     Message = ex.Message
                 };
             }
-            
+
+        }
+
+        [HttpPatch]
+        [Route("update")]
+        public dynamic Update(User user)
+        {
+            try
+            {
+                var token = Request.Headers.Where(x => x.Key == "Authorization").FirstOrDefault();
+
+                if (token.Value != "Token1234&")
+                {
+                    return new ErrorCode
+                    {
+                        Succes = false,
+                        Message = "Unauthorized"
+                    };
+                }
+
+                return _userService.SaveUser(user);
+            }
+            catch (Exception ex)
+            {
+                return new ErrorCode
+                {
+                    Succes = false,
+                    Message = ex.Message
+                };
+            }
+
+        }
+
+        [HttpDelete]
+        [Route("delete")]
+        public dynamic Delete(Guid Id)
+        {
+            try
+            {
+                var token = Request.Headers.Where(x => x.Key == "Authorization").FirstOrDefault();
+
+                if (token.Value != "Token1234&")
+                {
+                    return new ErrorCode
+                    {
+                        Succes = false,
+                        Message = "Unauthorized"
+                    };
+                }
+
+                return _userService.DeleteUser(Id);
+            }
+            catch (Exception ex)
+            {
+                return new ErrorCode
+                {
+                    Succes = false,
+                    Message = ex.Message
+                };
+            }
+
         }
     }
 }
